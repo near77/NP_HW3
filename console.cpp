@@ -5,7 +5,8 @@ using namespace std;
 
 int main(){
     cout << "Content-type: text/html" << endl << endl;
-    string html = R"(<!DOCTYPE html>
+    string html = 
+    R"(<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8" />
