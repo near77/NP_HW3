@@ -1,16 +1,16 @@
 #include <array>
+#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <memory>
-#include <utility>
-#include <string>
 #include <regex>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string>
+#include <unistd.h>
+#include <utility>
 #include <vector>
-#include <boost/algorithm/string.hpp>
-#include <fstream>
 
 using namespace std;
 using namespace boost::asio;
@@ -23,7 +23,7 @@ void output_shell(string id, string content){
     boost::replace_all(content,"\'","\\\'");
     boost::replace_all(content,"<","&lt;");
     boost::replace_all(content,">","&gt;");
-    printf("<script>document.getElementById('\"%s\"').innerHTML += '\"%s\"';</script>\n", id, content);
+    printf("<script>document.getElementById('\"%s\"').innerHTML += '\"%s\"';</script>\n", id.c_str(), content.c_str());
     // cout<<"<script>document.getElementById('"<<id<<"').innerHTML += '"<<content<<"';</script>"<<endl;
     fflush(stdout);
 }
@@ -35,7 +35,7 @@ void output_command(string id, string content){
     boost::replace_all(content,"\'","\\\'");
     boost::replace_all(content,"<","&lt;");
     boost::replace_all(content,">","&gt;");
-    printf("<script>document.getElementById('\"%s\"').innerHTML += '<b>\"%s\"</b>';</script>", id, content);
+    printf("<script>document.getElementById('\"%s\"').innerHTML += '<b>\"%s\"</b>';</script>", id.c_str(), content.c_str());
     // cout<<"<script>document.getElementById('"<<id<<"').innerHTML += '<b>"<<content<<"</b>';</script>"<<endl;
     fflush(stdout);
 };
