@@ -59,20 +59,14 @@ class Shell_session :public enable_shared_from_this<Shell_session>{
             auto self(shared_from_this());
             _resolver.async_resolve(query, [this,self](boost::system::error_code ec,ip::tcp::resolver::iterator endpoint_iterator) {
                 if (!ec) {
-                    do_connect(endpoint_iterator);
-                }
-                else {
-                    _socket.close();
-                }
-            }); 
-        }
-        void do_connect(ip::tcp::resolver::iterator endpoint_iterator){
-            auto self(shared_from_this());
-            boost::asio::async_connect(_socket, endpoint_iterator, [this, self](boost::system::error_code ec, ip::tcp::resolver::iterator){
-                if (!ec) {
-                    do_read();
-                } 
-                else {
+                    boost::asio::async_connect(_socket, endpoint_iterator, [this, self](boost::system::error_code ec, ip::tcp::resolver::iterator){
+                        if (!ec) {
+                            do_read();
+                        } else {
+                            _socket.close();
+                        }
+                    }); 
+                } else {
                     _socket.close();
                 }
             }); 

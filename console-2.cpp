@@ -16,91 +16,91 @@ using namespace std;
 using namespace boost::asio;
 io_service global_io_service;
 
-void output_to_shell(string id, string content, bool is_cmd){
+void output_to_shell(string id, string content, bool is_command) {
     boost::replace_all(content,"\r\n","&NewLine;");//Replace all \r\n with &NewLine in content.
     boost::replace_all(content,"\n","&NewLine;");
     boost::replace_all(content, "\\", "\\\\");
     boost::replace_all(content,"\'","\\\'");
     boost::replace_all(content,"<","&lt;");
     boost::replace_all(content,">","&gt;");
-    if (is_cmd) {
-        cout<<"<script>document.getElementById('"<<id<<"').innerHTML += '<b>"<<content<<"</b>';</script>"<<endl;
+    if (is_command) {
+        cout << "<script>document.getElementById('" << id << "').innerHTML += '<b>" << content << "</b>';</script>" << endl;
     } else {
-        cout<<"<script>document.getElementById('"<<id<<"').innerHTML += '"<<content<<"';</script>"<<endl;
+        cout << "<script>document.getElementById('" << id << "').innerHTML += '" << content << "';</script>" << endl;
     }
     fflush(stdout);
 }
 
-class ServerSession : public enable_shared_from_this<ServerSession>{
+
+class Shell_session :public enable_shared_from_this<Shell_session>{
     private:
-        enum { max_length = 1024 };
+        enum{max_length = 1024};
         ip::tcp::socket _socket;
         ip::tcp::resolver _resolver;
         ip::tcp::resolver::query query;
-        array<char, max_length> _data;
         string test_case;
-        ifstream test_file;
         string shell_id;
         string host_id;
+        array<char, max_length> _data;
+        ifstream test_file;
         deadline_timer timer;
-
     public:
-        ServerSession(string host, string port, string in_test_case, string in_shell_id, string in_host_id) :
-                    _socket(global_io_service), _resolver(global_io_service), query(ip::tcp::v4(), host, port), 
-                    test_case(in_test_case), shell_id(in_shell_id), host_id(in_host_id), timer(global_io_service){}
-        void start() {
+        Shell_session(string host, string port, string in_test_case, string in_shell_id, string in_host_id) :
+                        _socket(global_io_service), _resolver(global_io_service), query(ip::tcp::v4(), host, port), 
+                        test_case(in_test_case), shell_id(in_shell_id), host_id(in_host_id), timer(global_io_service){}
+        void start(){
             string test_file_name = "test_case/" + test_case;
             test_file.open(test_file_name);
+            do_resolve();
         }
 
     private:
         void do_resolve() {
             auto self(shared_from_this());
-            // Resolved domain get multiple connection, try everyone.
             _resolver.async_resolve(query, [this,self](boost::system::error_code ec,ip::tcp::resolver::iterator endpoint_iterator) {
                 if (!ec) {
-                    boost::asio::async_connect(_socket, endpoint_iterator, 
-                        [this, self](boost::system::error_code ec, ip::tcp::resolver::iterator){
-                        if (!ec) {
-                            do_read();
-                        } else {
-                            _socket.close();
-                        }
-                    }); 
-                } else {
+                    do_connect(endpoint_iterator);
+                }
+                else {
                     _socket.close();
                 }
             }); 
         }
-
+        void do_connect(ip::tcp::resolver::iterator endpoint_iterator){
+            auto self(shared_from_this());
+            boost::asio::async_connect(_socket, endpoint_iterator, [this, self](boost::system::error_code ec, ip::tcp::resolver::iterator){
+                if (!ec) {
+                    do_read();
+                } 
+                else {
+                    _socket.close();
+                }
+            }); 
+        }
         void do_read() {
             auto self(shared_from_this());
             _socket.async_read_some(
-                buffer(_data, max_length),
-                [this, self](boost::system::error_code ec, size_t length) {
+                buffer(_data, max_length),[this, self](boost::system::error_code ec, std::size_t length) {
                     if (!ec) {
                         string buf(_data.begin(),_data.begin()+length);
                         output_to_shell(shell_id, buf, false);
-                        if (buf.find("% ") != string::npos) {
-                            do_send_command();
-                        }
+                        if (buf.find("% ") != string::npos)
+                            do_send_cmd();
                         do_read();
                     } else {
                         _socket.close();
                     }
                 });
         }
-
-        void do_send_command(){
+        void do_send_cmd() {
             auto self(shared_from_this());
             string tmp;
-            getline(test_file,tmp); // Get cmd from test_case file.
-            tmp += "\n";
-            output_to_shell(shell_id, tmp, true); // Display the cmd to web.
-            _socket.async_send(buffer(tmp),[this, self](boost::system::error_code ec, std::size_t /* length */){
-                // Send cmd to NP_project2 server.
+            getline(test_file,tmp);
+            tmp +="\n";
+            output_to_shell(shell_id, tmp, true);
+            _socket.async_send(buffer(tmp),[this, self](boost::system::error_code ec, std::size_t /* length */) {
                 if (!ec) {
-                    do_read();// If not err, call do_read to display the output from project2 server to the web.
+                    do_read();
                 } else {
                     _socket.close();
                 }
@@ -126,15 +126,14 @@ class client{
         void start(){
             string tmp = ip+":"+port;
             output_to_shell(host_id, tmp, false);
-            make_shared<ServerSession>(ip,port,test_case,shell_id,host_id)->start();
+            make_shared<Shell_session>(ip,port,test_case,shell_id,host_id)->start();
         }
 };
 
+
+
 int main(){
     char* query_string = getenv("QUERY_STRING");
-    cout << "HTTP/1.1 200 OK"<<endl;
-    cout << "Content-type: text/html" << endl << endl;
-
     string query(query_string);
     query = "?" + query;
     smatch str_match;
@@ -204,16 +203,18 @@ int main(){
     cout << html;
     int id=0;
     vector<client> clients;
-    while (regex_search (query,str_match,patterns)) {
+    while (regex_search (query, str_match, patterns)) {
         string ip = str_match[2].str();
         query = str_match.suffix().str();
-        regex_search (query,str_match,patterns);
+
+        regex_search (query, str_match, patterns);
         string port = str_match[2].str();
         query = str_match.suffix().str();
-        regex_search (query,str_match,patterns);
+
+        regex_search (query, str_match, patterns);
         string test = str_match[2].str();
         query = str_match.suffix().str();
-        client tmp(ip,port,test,id);
+        client tmp(ip, port, test, id);
         clients.push_back(tmp);
         id++;
     }
