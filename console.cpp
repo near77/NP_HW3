@@ -206,9 +206,9 @@ int main(){
         query = str_match.suffix().str();
 
         regex_search (query, str_match, patterns);
-        string test = str_match[2].str();
+        string test_case = str_match[2].str();
         query = str_match.suffix().str();
-        client tmp(ip, port, test, id);
+        client tmp(ip, port, test_case, id);
         clients.push_back(tmp);
         id++;
     }

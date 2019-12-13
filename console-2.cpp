@@ -228,3 +228,18 @@ int main(){
     }
     return 0;
 }
+
+
+/*
+[INFO] Part 1-1: console.cgi
+  *  (25%)    http://nplinux10.cs.nctu.edu.tw/~yschen0525/panel.cgi
+
+[INFO] Part 1-2: http_server
+  *  (5%)     http://nplinux10.cs.nctu.edu.tw:36089/printenv.cgi
+     (5%)     http://nplinux10.cs.nctu.edu.tw:36089/hello.cgi
+     (5%)     http://nplinux10.cs.nctu.edu.tw:36089/welcome.cgi
+
+[INFO] Part 1-3: combined
+  *  (10%)    http://nplinux10.cs.nctu.edu.tw:36089/panel.cgi
+
+*/
