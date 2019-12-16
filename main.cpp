@@ -74,8 +74,9 @@ class Shell_session :public enable_shared_from_this<Shell_session>{
                         output_to_shell(shell_id, buf, false);
                         if (buf.find("% ") != string::npos){
                             do_send_cmd();
+                        } else {
+                            do_read();
                         }
-                        do_read();
                     } else {
                         _socket.close();
                     }

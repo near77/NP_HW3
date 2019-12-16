@@ -51,6 +51,7 @@ class Shell_session :public enable_shared_from_this<Shell_session>{
         void start(){
             string test_file_name = "test_case/" + test_case;
             test_file.open(test_file_name);
+            _data.fill('\0');
             do_resolve();
         }
 
@@ -71,21 +72,29 @@ class Shell_session :public enable_shared_from_this<Shell_session>{
                 }
             }); 
         }
+
         void do_read() {
             auto self(shared_from_this());
+            _data.fill('\0');
             _socket.async_read_some(
-                buffer(_data, max_length),[this, self](boost::system::error_code ec, std::size_t length) {
+                buffer(_data),[this, self](boost::system::error_code ec, std::size_t length) {
                     if (!ec) {
-                        string buf(_data.begin(),_data.begin()+length);
+                        // string buf(_data.begin(),_data.begin()+length);
+                        string buf(_data.data());
                         output_to_shell(shell_id, buf, false);
-                        if (buf.find("% ") != string::npos)
+                        if (buf.find("% ") != string::npos){
                             do_send_cmd();
-                        do_read();
+                        } else {
+                            do_read();
+                        }
                     } else {
                         _socket.close();
                     }
                 });
+            
         }
+        
+
         void do_send_cmd() {
             auto self(shared_from_this());
             string tmp;
