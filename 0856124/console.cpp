@@ -51,6 +51,7 @@ class Shell_session :public enable_shared_from_this<Shell_session>{
         void start(){
             string test_file_name = "test_case/" + test_case;
             test_file.open(test_file_name);
+            _data.fill('\0');
             do_resolve();
         }
 
@@ -59,39 +60,41 @@ class Shell_session :public enable_shared_from_this<Shell_session>{
             auto self(shared_from_this());
             _resolver.async_resolve(query, [this,self](boost::system::error_code ec,ip::tcp::resolver::iterator endpoint_iterator) {
                 if (!ec) {
-                    do_connect(endpoint_iterator);
-                }
-                else {
+                    boost::asio::async_connect(_socket, endpoint_iterator, [this, self](boost::system::error_code ec, ip::tcp::resolver::iterator){
+                        if (!ec) {
+                            do_read();
+                        } else {
+                            _socket.close();
+                        }
+                    }); 
+                } else {
                     _socket.close();
                 }
             }); 
         }
-        void do_connect(ip::tcp::resolver::iterator endpoint_iterator){
-            auto self(shared_from_this());
-            boost::asio::async_connect(_socket, endpoint_iterator, [this, self](boost::system::error_code ec, ip::tcp::resolver::iterator){
-                if (!ec) {
-                    do_read();
-                } 
-                else {
-                    _socket.close();
-                }
-            }); 
-        }
+
         void do_read() {
             auto self(shared_from_this());
+            _data.fill('\0');
             _socket.async_read_some(
-                buffer(_data, max_length),[this, self](boost::system::error_code ec, std::size_t length) {
+                buffer(_data),[this, self](boost::system::error_code ec, std::size_t length) {
                     if (!ec) {
-                        string buf(_data.begin(),_data.begin()+length);
+                        // string buf(_data.begin(),_data.begin()+length);
+                        string buf(_data.data());
                         output_to_shell(shell_id, buf, false);
-                        if (buf.find("% ") != string::npos)
+                        if (buf.find("% ") != string::npos){
                             do_send_cmd();
-                        do_read();
+                        } else {
+                            do_read();
+                        }
                     } else {
                         _socket.close();
                     }
                 });
+            
         }
+        
+
         void do_send_cmd() {
             auto self(shared_from_this());
             string tmp;
@@ -212,9 +215,9 @@ int main(){
         query = str_match.suffix().str();
 
         regex_search (query, str_match, patterns);
-        string test = str_match[2].str();
+        string test_case = str_match[2].str();
         query = str_match.suffix().str();
-        client tmp(ip, port, test, id);
+        client tmp(ip, port, test_case, id);
         clients.push_back(tmp);
         id++;
     }
@@ -228,18 +231,3 @@ int main(){
     }
     return 0;
 }
-
-
-/*
-[INFO] Part 1-1: console.cgi
-  *  (25%)    http://nplinux10.cs.nctu.edu.tw/~yschen0525/panel.cgi
-
-[INFO] Part 1-2: http_server
-  *  (5%)     http://nplinux10.cs.nctu.edu.tw:36089/printenv.cgi
-     (5%)     http://nplinux10.cs.nctu.edu.tw:36089/hello.cgi
-     (5%)     http://nplinux10.cs.nctu.edu.tw:36089/welcome.cgi
-
-[INFO] Part 1-3: combined
-  *  (10%)    http://nplinux10.cs.nctu.edu.tw:36089/panel.cgi
-
-*/
